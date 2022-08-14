@@ -1,5 +1,5 @@
-from flask import Flask, jsonify
-from flask_jwt import JWT, jwt_required, current_identity
+from flask import Flask, jsonify, request
+import auth_jwt
 
 # si no paso __name__ necesito un __init__.py
 server = Flask(__name__)
@@ -7,20 +7,26 @@ server.debug = True
 server.config['SECRET_KEY'] = 'super-secret'
 
 # implementacion de flask-jwt
-from auth_jwt import * 
-jwt = JWT(server, authenticate, identity) 
-
-#obj_json = {'user': 'dopel', 'level': 'root'}
 
 @server.route('/')
 def index():
     return 'Running' 
 
 @server.route('/jsonify')
-@jwt_required()
+@auth_jwt.token_required
 def json():
-    return '%s' % current_identity 
+    return jsonify({'message' : 'data secret'}) 
 
+@server.route('/auth', methods = ['GET', 'POST'])
+def auth(): 
+    if request.method == 'GET':
+        return jsonify({'message' : 'end point for verified'})
+    if request.method == 'POST':
+        data = request.data
+        headers = request.headers
+        if headers.get('Content-Type') == 'application/json':
+            pass
+        return jsonify({'message' : 'work'})
 
 if __name__ == '__main__':
     server.run()

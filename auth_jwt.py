@@ -1,5 +1,12 @@
-from flask import Flask
-from werkzeug.security import safe_str_cmp
+import jwt
+from datetime import datetime
+from functools import wraps
+from flask import jsonify, request
+from time import sleep
+
+# dumb key
+MY_SECRET_KEY = 'bloodywood'
+
 
 class User(object):
     def __init__(self, id, username, password):
@@ -20,12 +27,32 @@ users = [User(0, 'master', 'dopel'),
 username_table = {u.username: u for u in users}
 userid_table = {u.id: u for u in users}
 
-def authenticate(username, password):
-    user = username_table.get(username, None)
-    if user and safe_str_cmp(user.password.encode('utf-8'), password.encode('utf-8')):
-        return user
+def create_token(payload: dict):
+    token = jwt.encode({'user' : payload.user, 'password' : payload.password,
+        'exp': datetime.utcnow() + datetime.timedelta(minutes=4)}, key = MY_SECRET_KEY,
+        algorithm = 'HS256')
+    return jsonify({'token' : token})
 
-def identity(payload):
-    user_id = payload['identity']
-    return userid_table.get(user_id, None)
+def token_required(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        token =  request.args.get('token')
+        user = request.args.get('user')
+        password = request.args.get('password')
+        if not token:
+            return jsonify({'message' : 'token is missing'})
+        elif user in username_table:
+            user = username_table.get(user, None)
+            print(user)
+            return jsonify({'message' : 'User is found'})
+            if password == user.password:
+               try:
+                   data = jwt.decode(token, MY_SECRET_KEY, algorithms='HS256')
+               except:
+                    return jsonify({'messege' : 'token is valid'})
+        else: 
+            return jsonify({'message' : 'User dont found'})
+        return func(*args, **kwargs)
+    return decorated
+            
 
